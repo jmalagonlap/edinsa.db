@@ -1,0 +1,12 @@
+# Reportes de eventos (20-50 MB cada uno — demasiado grandes para git)
+recentEvents-report*.csv
+
+# Caché Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
