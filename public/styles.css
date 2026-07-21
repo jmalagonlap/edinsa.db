@@ -65,12 +65,12 @@ body {
 .top-bar-inner {
   max-width: 1480px;
   margin: 0 auto;
-  padding: 12px 28px;
+  padding: 10px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  height: 56px;
+  min-height: 56px;
 }
 
 .brand {
