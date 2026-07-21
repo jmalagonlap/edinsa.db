@@ -50,6 +50,10 @@ EMBED_RE = re.compile(
     r'(<script id="embedded-data" type="application/json">)(.*?)(</script>)',
     re.DOTALL,
 )
+ANALYSIS_RE = re.compile(
+    r'(<script id="ai-analysis" type="text/html">)(.*?)(</script>)',
+    re.DOTALL,
+)
 
 
 def embed_data_in_html(data):
@@ -70,6 +74,23 @@ def embed_data_in_html(data):
         fh.write(new_html)
     size_mb = os.path.getsize(HTML_FILE) / (1024 * 1024)
     print(f"[OK] Datos incrustados en {HTML_FILE} ({size_mb:.2f} MB)")
+
+
+def embed_analysis_in_html(analysis_html: str):
+    """Incrusta el HTML del análisis IA en script#ai-analysis dentro de index.html."""
+    if not os.path.exists(HTML_FILE):
+        return
+    with open(HTML_FILE, encoding="utf-8") as fh:
+        html = fh.read()
+    # Escapar </ dentro del HTML para no romper el tag
+    safe = analysis_html.replace("</", "<\\/")
+    new_html, n = ANALYSIS_RE.subn(lambda m: m.group(1) + safe + m.group(3), html, count=1)
+    if n == 0:
+        print("[WARN] No se encontró el marcador <script id=\"ai-analysis\"> en index.html.")
+        return
+    with open(HTML_FILE, "w", encoding="utf-8") as fh:
+        fh.write(new_html)
+    print("[OK] Análisis IA incrustado en index.html.")
 
 # Colores fijos por tipo de evento (paleta consistente con tds-dashboard)
 EVENT_COLORS = {
@@ -388,6 +409,16 @@ def main():
     print(f"\n[OK] Generado {OUT_FILE} ({size_mb:.2f} MB)")
 
     embed_data_in_html(data)
+
+    # Análisis ejecutivo IA (requiere ANTHROPIC_API_KEY + pip install anthropic)
+    try:
+        sys.path.insert(0, BASE_DIR)
+        from build_analysis import build_analysis
+        analysis_html = build_analysis(data)
+        if analysis_html:
+            embed_analysis_in_html(analysis_html)
+    except Exception as exc:
+        print(f"[análisis] Saltado ({exc})")
 
 
 if __name__ == "__main__":

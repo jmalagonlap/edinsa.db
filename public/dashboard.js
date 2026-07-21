@@ -742,6 +742,31 @@
     });
   }
 
+  // ── Análisis ejecutivo IA ────────────────────────────────────────────────
+  function loadAnalysis() {
+    const scriptEl = document.getElementById("ai-analysis");
+    if (!scriptEl) return;
+    const html = scriptEl.textContent.replace(/<\\\//g, "</").trim();
+    if (!html) return;
+
+    const section = document.getElementById("analysis-section");
+    const content = document.getElementById("analysis-content");
+    if (!section || !content) return;
+
+    content.innerHTML = html;
+    section.hidden = false;
+
+    const btn = document.getElementById("analysis-toggle");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const expanded = btn.getAttribute("aria-expanded") !== "false";
+        content.style.display = expanded ? "none" : "";
+        btn.setAttribute("aria-expanded", String(!expanded));
+        btn.textContent = expanded ? "Mostrar ▼" : "Ocultar ▲";
+      });
+    }
+  }
+
   // Lee el JSON incrustado en el propio HTML (script#embedded-data).
   // Es el camino normal cuando el archivo se abre con doble clic (file://),
   // donde fetch() a data.json queda bloqueado por CORS.
@@ -772,6 +797,7 @@
       document.title = `Dashboard de Eventos — ${G.cliente.nombre_corto}`;
       initFilterControls();
       renderAll();
+      loadAnalysis();
       setTimeout(() => document.getElementById("loading").classList.add("hidden"), 150);
     } catch (err) {
       console.error(err);
