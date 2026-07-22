@@ -33,6 +33,32 @@ FLEET_DB_FILE = os.path.join(BASE_DIR, "fleet_db.json")
 
 SIN_PLAZA = "Sin plaza"
 
+# Tipos de evento que se excluyen del reporte
+SKIP_EVENTS = {"sin_cinturon"}
+
+T2_FILE = os.path.join(BASE_DIR, "Edinsa T2.xlsx")
+
+
+def load_excluded_plates() -> set:
+    """Carga las placas a excluir desde Edinsa T2.xlsx (una placa por fila, sin cabecera)."""
+    excluded = set()
+    if not os.path.exists(T2_FILE):
+        print(f"[WARN] No se encontró {T2_FILE}; no se excluirá ninguna placa T2.")
+        return excluded
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(T2_FILE, read_only=True, data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(values_only=True):
+            val = row[0]
+            if val:
+                excluded.add(str(val).strip().upper())
+        wb.close()
+        print(f"[OK] Placas T2 excluidas: {len(excluded)}")
+    except Exception as exc:
+        print(f"[WARN] No se pudo leer {T2_FILE}: {exc}")
+    return excluded
+
 
 def load_fleet_db():
     """Carga fleet_db.json (generado por build_fleet_db.py) con la
@@ -169,6 +195,7 @@ def normalize_vehicle(raw):
 def main():
     files = sorted(glob.glob(os.path.join(BASE_DIR, "recentEvents-report*.csv")))
     print(f"Encontrados {len(files)} archivos CSV")
+    excluded_plates = load_excluded_plates()
 
     seen_rows = set()
     raw_rows = 0
@@ -213,7 +240,16 @@ def main():
                 if not vehiculo or not fecha:
                     continue
 
+                # Excluir placas T2
+                if vehiculo.upper() in excluded_plates:
+                    continue
+
                 ekey = normalize_event(evento_raw)
+
+                # Excluir tipos de evento no deseados
+                if ekey in SKIP_EVENTS:
+                    continue
+
                 raw_event_names_seen[ekey].add(evento_raw)
                 qty = parse_occurrences(row[i_ocurrencias]) if i_ocurrencias < len(row) else 1
                 m = month_key(fecha)
