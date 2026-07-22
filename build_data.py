@@ -124,6 +124,7 @@ EVENT_COLORS = {
     "distraido":            "#1D4ED8",
     "colision_advertencia": "#E85D1E",
     "bostezando":           "#7C3AED",
+    "fatiga":               "#0891B2",
     "sin_cinturon":         "#059669",
     "colision_frontal":     "#DC2626",
     "salida_carril":        "#CA8A04",
@@ -135,6 +136,7 @@ EVENT_LABELS = {
     "distraido":            "Conductor distraído",
     "colision_advertencia": "Advertencia de Colisión Frontal",
     "bostezando":           "Conductor bostezando",
+    "fatiga":               "Conducción con fatiga",
     "sin_cinturon":         "Conducción sin cinturón de seguridad",
     "colision_frontal":     "Colisión frontal",
     "salida_carril":        "Salida de carril",
@@ -163,6 +165,8 @@ def normalize_event(raw):
         return "colision_frontal"
     if "salida de carril" in n or "salida carril" in n:
         return "salida_carril"
+    if "fatiga" in n:
+        return "fatiga"
     return "otro"
 
 
