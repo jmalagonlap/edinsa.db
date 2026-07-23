@@ -189,6 +189,24 @@ def month_key(date_str):
     return date_str[:7]
 
 
+def week_key(date_str):
+    """'YYYY-MM-DD ...' -> 'YYYY-Www' (semana ISO)."""
+    from datetime import date
+    d = date.fromisoformat(date_str[:10])
+    iso = d.isocalendar()
+    return f"{iso[0]:04d}-W{iso[1]:02d}"
+
+
+def week_to_month(week_str):
+    """'YYYY-Www' -> 'YYYY-MM' del lunes de esa semana (para filtrado)."""
+    from datetime import date, timedelta
+    year, w = week_str.split("-W")
+    jan4 = date(int(year), 1, 4)
+    monday_w1 = jan4 - timedelta(days=jan4.weekday())
+    monday = monday_w1 + timedelta(weeks=int(w) - 1)
+    return monday.strftime("%Y-%m")
+
+
 def normalize_vehicle(raw):
     """El campo 'Nombre de Máquina' del CSV de eventos trae el prefijo 'CO_'
     (ej. 'CO_KSP252'); el resto del dato del cliente (BD PLACAS EDINSA, km
@@ -198,6 +216,24 @@ def normalize_vehicle(raw):
     if v.upper().startswith("CO_"):
         v = v[3:]
     return v
+
+
+def _build_sin_conductor(months, monthly_sc, monthly_event, weekly_sc, weekly_total):
+    """Construye el bloque sin_conductor para data.json."""
+    mensual = []
+    for m in months:
+        total = round(sum(monthly_event.get(m, {}).values()), 2)
+        sc = round(monthly_sc.get(m, 0), 2)
+        mensual.append({"month": m, "sin_conductor": sc, "total": total})
+
+    all_weeks = sorted(weekly_total.keys())
+    semanal = []
+    for w in all_weeks:
+        sc = round(weekly_sc.get(w, 0), 2)
+        total = round(weekly_total.get(w, 0), 2)
+        semanal.append({"week": w, "month": week_to_month(w), "sin_conductor": sc, "total": total})
+
+    return {"mensual": mensual, "semanal": semanal, "semanas": all_weeks}
 
 
 def main():
@@ -221,6 +257,9 @@ def main():
     date_min = None
     date_max = None
     raw_event_names_seen = defaultdict(set)  # event_key -> set of raw labels seen (para verificación)
+    monthly_sin_conductor = defaultdict(float)   # month -> count eventos sin conductor
+    weekly_sin_conductor = defaultdict(float)    # week  -> count eventos sin conductor
+    weekly_total = defaultdict(float)            # week  -> count total eventos
 
     for f in files:
         with open(f, encoding="utf-8") as fh:
@@ -273,8 +312,13 @@ def main():
                 if vehiculo not in vehicle_last or m > vehicle_last[vehiculo]:
                     vehicle_last[vehiculo] = m
 
+                w = week_key(fecha)
+                weekly_total[w] += qty
                 if conductor:
                     drivers_named.add(conductor)
+                else:
+                    monthly_sin_conductor[m] += qty
+                    weekly_sin_conductor[w] += qty
 
                 d = fecha[:10]
                 if date_min is None or d < date_min:
@@ -437,6 +481,9 @@ def main():
         "vehicle_month_type": vehicle_month_type,
         "vehicle_plaza": vehicle_plaza,
         "vehicle_month_km": vehicle_month_km,
+        "sin_conductor": _build_sin_conductor(months, monthly_sin_conductor,
+                                               monthly_event, weekly_sin_conductor,
+                                               weekly_total),
         "diagnostico": {
             "filas_crudas": raw_rows,
             "filas_tras_dedup": dedup_rows,

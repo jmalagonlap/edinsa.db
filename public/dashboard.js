@@ -507,6 +507,107 @@
     });
   }
 
+  // ── Sin conductor identificado ───────────────────────────────────────────
+  let scGran = "mensual"; // "mensual" | "semanal"
+
+  function renderSinConductor() {
+    destroyChart("sin-conductor");
+    const SC = G.sin_conductor;
+    if (!SC) return;
+
+    const months = monthsInRange();
+    const monthSet = new Set(months);
+    let rows, labels;
+
+    if (scGran === "mensual") {
+      rows = SC.mensual.filter(r => monthSet.has(r.month));
+      labels = rows.map(r => monthLabel(r.month));
+    } else {
+      rows = SC.semanal.filter(r => monthSet.has(r.month));
+      labels = rows.map(r => {
+        const [yr, wk] = r.week.split("-W");
+        return `W${wk}\n${yr}`;
+      });
+    }
+
+    const counts = rows.map(r => r.sin_conductor);
+    const pcts   = rows.map(r => r.total > 0 ? +(r.sin_conductor / r.total * 100).toFixed(1) : 0);
+
+    const ctx = document.getElementById("sin-conductor").getContext("2d");
+    CHARTS["sin-conductor"] = new Chart(ctx, {
+      data: {
+        labels,
+        datasets: [
+          {
+            type: "bar",
+            label: "Sin conductor identificado",
+            data: counts,
+            backgroundColor: "rgba(188,24,24,0.18)",
+            borderColor: "#BC1818",
+            borderWidth: 1,
+            yAxisID: "y",
+            order: 2,
+          },
+          {
+            type: "line",
+            label: "% del total",
+            data: pcts,
+            borderColor: "#BC1818",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            pointRadius: scGran === "mensual" ? 4 : 0,
+            pointHoverRadius: 5,
+            tension: 0.3,
+            yAxisID: "y2",
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "top", align: "start", labels: { boxWidth: 10, boxHeight: 10, padding: 8, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.yAxisID === "y2"
+                ? `% del total: ${ctx.raw.toFixed(1)}%`
+                : `Sin conductor: ${fmtNum(ctx.raw)}`,
+            },
+          },
+          datalabels: { display: false },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              autoSkip: true,
+              maxTicksLimit: scGran === "semanal" ? 26 : 18,
+              maxRotation: scGran === "semanal" ? 45 : 0,
+              font: { size: scGran === "semanal" ? 9 : 11 },
+            },
+          },
+          y: {
+            beginAtZero: true,
+            position: "left",
+            grid: { color: "#F0F1F3" },
+            ticks: { callback: v => fmtNum(v) },
+            title: { display: true, text: "Eventos" },
+          },
+          y2: {
+            beginAtZero: true,
+            max: 100,
+            position: "right",
+            grid: { display: false },
+            ticks: { callback: v => v + "%" },
+            title: { display: true, text: "% del total" },
+          },
+        },
+      },
+    });
+  }
+
   // ── Detalle mensual apilado por tipo ────────────────────────────────────
   function renderDetalleMensual() {
     destroyChart("detalle-mensual");
@@ -687,6 +788,7 @@
     renderComparativoAnual();
     renderDonut();
     renderVehiculosActivos();
+    renderSinConductor();
     renderDetalleMensual();
     renderTopVehiculos();
     renderPivot();
@@ -720,6 +822,15 @@
       btn.classList.add("active");
       anualMetric = btn.dataset.metric;
       renderComparativoAnual();
+    });
+
+    document.getElementById("sc-granularity-toggle").addEventListener("click", e => {
+      const btn = e.target.closest(".metric-btn");
+      if (!btn) return;
+      e.currentTarget.querySelectorAll(".metric-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      scGran = btn.dataset.gran;
+      renderSinConductor();
     });
 
     document.getElementById("tabla-buscar").addEventListener("input", () => renderPivot());
