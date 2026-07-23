@@ -456,10 +456,11 @@
         onClick: (evt, elements) => {
           if (!elements.length) return;
           const clickedKey = arr[elements[0].index].clave;
-          if (state.types.has(clickedKey)) {
-            if (state.types.size === 1) return; // al menos un tipo activo
-            state.types.delete(clickedKey);
+          const isIsolated = state.types.size === 1 && state.types.has(clickedKey);
+          if (isIsolated) {
+            G.eventos_meta.forEach(e => state.types.add(e.clave));
           } else {
+            state.types.clear();
             state.types.add(clickedKey);
           }
           renderChips();

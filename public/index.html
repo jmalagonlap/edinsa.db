@@ -67,6 +67,19 @@
       </article>
     </section>
 
+    <!-- Donut + Vehículos activos (movido tras KPIs) -->
+    <section class="chart-grid chart-grid-2col">
+      <article class="chart-card chart-card-pie">
+        <h3 class="chart-title">% de eventos por tipo</h3>
+        <div class="chart-wrap chart-wrap-pie"><canvas id="porcentajes"></canvas></div>
+        <p class="pie-hint">Clic en un segmento para ver solo ese tipo · clic de nuevo para volver a todos</p>
+      </article>
+      <article class="chart-card">
+        <h3 class="chart-title">Vehículos activos por mes</h3>
+        <div class="chart-wrap"><canvas id="vehiculos-activos"></canvas></div>
+      </article>
+    </section>
+
     <!-- Barra de filtros -->
     <section class="filters-bar">
       <div class="filter-group">
@@ -130,19 +143,6 @@
         </div>
         <p class="chart-subtitle">Ignora el filtro de rango de meses (usa todo el histórico) para poder comparar, p. ej., marzo 2023 vs. marzo 2024 vs. marzo 2026. Respeta el filtro de vehículo, plaza y tipo de evento.</p>
         <div class="chart-wrap chart-wrap-tall"><canvas id="comparativo-anual"></canvas></div>
-      </article>
-    </section>
-
-    <!-- Donut + Stacked por tipo -->
-    <section class="chart-grid chart-grid-2col">
-      <article class="chart-card chart-card-pie">
-        <h3 class="chart-title">% de eventos por tipo</h3>
-        <div class="chart-wrap chart-wrap-pie"><canvas id="porcentajes"></canvas></div>
-        <p class="pie-hint">Haz clic en un segmento para filtrar por tipo de evento</p>
-      </article>
-      <article class="chart-card">
-        <h3 class="chart-title">Vehículos activos por mes</h3>
-        <div class="chart-wrap"><canvas id="vehiculos-activos"></canvas></div>
       </article>
     </section>
 
