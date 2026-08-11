@@ -253,6 +253,21 @@
       </div>
     </section>
 
+    <!-- Filtros de facturación -->
+    <section class="filters-bar billing-filters-bar" id="billing-filters">
+      <div class="filter-group">
+        <label class="filter-label">Año</label>
+        <div class="metric-toggle" id="billing-year-toggle">
+          <button class="metric-btn active" data-year="all">Todos</button>
+        </div>
+      </div>
+      <div class="filter-group filter-group-grow">
+        <label class="filter-label">Mes</label>
+        <div class="chip-row" id="billing-month-chips"></div>
+      </div>
+      <button class="btn-clear" id="billing-btn-clear">✕ Limpiar</button>
+    </section>
+
     <!-- Gráfica principal: facturación por mes apilada -->
     <section class="chart-grid">
       <article class="chart-card">

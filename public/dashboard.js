@@ -943,6 +943,103 @@
   let BL = null;
   let billingView = "stacked";
   let billingChartsRendered = false;
+  const billingFilter = {
+    year: "all",       // "all" | "YYYY"
+    months: new Set(), // vacío = todos
+  };
+
+  function billingFilteredRows() {
+    if (!BL) return [];
+    return BL.mensual.filter(r => {
+      const yr = r.month.slice(0, 4);
+      if (billingFilter.year !== "all" && yr !== billingFilter.year) return false;
+      if (billingFilter.months.size && !billingFilter.months.has(r.month)) return false;
+      return true;
+    });
+  }
+
+  function billingBuildYearButtons() {
+    const yearTog = document.getElementById("billing-year-toggle");
+    if (!yearTog || !BL) return;
+    const years = [...new Set(BL.meses.map(m => m.slice(0, 4)))].sort();
+    yearTog.innerHTML =
+      `<button class="metric-btn ${billingFilter.year === "all" ? "active" : ""}" data-year="all">Todos</button>` +
+      years.map(y =>
+        `<button class="metric-btn ${billingFilter.year === y ? "active" : ""}" data-year="${y}">${y}</button>`
+      ).join("");
+  }
+
+  function billingBuildMonthChips() {
+    const chipsRow = document.getElementById("billing-month-chips");
+    if (!chipsRow || !BL) return;
+    const MN = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    const visible = billingFilter.year === "all"
+      ? BL.meses
+      : BL.meses.filter(m => m.startsWith(billingFilter.year));
+    chipsRow.innerHTML = visible.map(m => {
+      const [yr, mo] = m.split("-");
+      const label = MN[parseInt(mo, 10) - 1] + " " + yr.slice(2);
+      const active = !billingFilter.months.size || billingFilter.months.has(m);
+      const border = active ? "style=\"border-color:var(--color-primary);opacity:1\"" : "style=\"opacity:0.4\"";
+      return `<button class="chip${active ? " active" : ""}" data-month="${m}" ${border}>${label}</button>`;
+    }).join("");
+  }
+
+  function initBillingFilters() {
+    if (!BL) return;
+
+    billingBuildYearButtons();
+    billingBuildMonthChips();
+
+    const yearTog = document.getElementById("billing-year-toggle");
+    if (yearTog) {
+      yearTog.addEventListener("click", e => {
+        const btn = e.target.closest(".metric-btn");
+        if (!btn) return;
+        billingFilter.year = btn.dataset.year;
+        billingFilter.months.clear();
+        billingBuildYearButtons();
+        billingBuildMonthChips();
+        rerenderBilling();
+      });
+    }
+
+    const chipsRow = document.getElementById("billing-month-chips");
+    if (chipsRow) {
+      chipsRow.addEventListener("click", e => {
+        const chip = e.target.closest(".chip");
+        if (!chip) return;
+        const m = chip.dataset.month;
+        if (!billingFilter.months.size) {
+          billingFilter.months.add(m);
+        } else if (billingFilter.months.has(m)) {
+          billingFilter.months.delete(m);
+        } else {
+          billingFilter.months.add(m);
+        }
+        billingBuildMonthChips();
+        rerenderBilling();
+      });
+    }
+
+    const clearBtn = document.getElementById("billing-btn-clear");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        billingFilter.year = "all";
+        billingFilter.months.clear();
+        billingBuildYearButtons();
+        billingBuildMonthChips();
+        rerenderBilling();
+      });
+    }
+  }
+
+  function rerenderBilling() {
+    renderBillingKPIs();
+    renderBillingMensual();
+    renderBillingDonut();
+    renderBillingAcumulado();
+  }
 
   function loadBillingData() {
     const el = document.getElementById("billing-data");
@@ -966,12 +1063,17 @@
 
   function renderBillingKPIs() {
     if (!BL) return;
-    const total = BL.total_general;
-    const t = BL.totales_por_categoria;
+    const rows = billingFilteredRows();
+    const totByCat = {};
+    BL.categorias.forEach(c => { totByCat[c.clave] = rows.reduce((s, r) => s + (r[c.clave] || 0), 0); });
+    const total = rows.reduce((s, r) => s + (r.total || 0), 0);
 
     const el = id => document.getElementById(id);
     el("billing-kpi-total").textContent = "$ " + copFormat(total);
-    el("billing-kpi-periodo").textContent = BL.meses[0] + " → " + BL.meses[BL.meses.length - 1];
+    const months = rows.map(r => r.month);
+    el("billing-kpi-periodo").textContent = months.length
+      ? months[0] + " → " + months[months.length - 1]
+      : "Sin datos";
 
     const subIds = {
       telemetria:    "billing-kpi-tel-pct",
@@ -980,7 +1082,7 @@
       equipos:       "billing-kpi-equip-pct",
     };
     BL.categorias.forEach(cat => {
-      const v = t[cat.clave] || 0;
+      const v = totByCat[cat.clave] || 0;
       const pct = total > 0 ? (v / total * 100).toFixed(1) + "% del total" : "—";
       const valEl = el("billing-kpi-" + cat.clave);
       if (valEl) valEl.textContent = "$ " + copFormat(v);
@@ -995,16 +1097,17 @@
   function renderBillingMensual() {
     if (!BL) return;
     destroyChart("billing-mensual");
+    const rows = billingFilteredRows();
     const mnLabels = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-    const labels = BL.meses.map(m => {
-      const [yr, mo] = m.split("-");
+    const labels = rows.map(r => {
+      const [yr, mo] = r.month.split("-");
       return mnLabels[parseInt(mo, 10) - 1] + "\n" + yr;
     });
 
     const isStacked = billingView === "stacked";
     const datasets = BL.categorias.map(cat => ({
       label: cat.label,
-      data: BL.mensual.map(r => r[cat.clave] || 0),
+      data: rows.map(r => r[cat.clave] || 0),
       backgroundColor: cat.color + "CC",
       borderColor: cat.color,
       borderWidth: 1,
@@ -1057,9 +1160,10 @@
   function renderBillingDonut() {
     if (!BL) return;
     destroyChart("billing-donut");
-    const t = BL.totales_por_categoria;
+    const rows = billingFilteredRows();
+    const filtTotal = rows.reduce((s, r) => s + (r.total || 0), 0);
     const labels = BL.categorias.map(c => c.label);
-    const values = BL.categorias.map(c => t[c.clave] || 0);
+    const values = BL.categorias.map(c => rows.reduce((s, r) => s + (r[c.clave] || 0), 0));
     const colors = BL.categorias.map(c => c.color);
 
     CHARTS["billing-donut"] = new Chart(
@@ -1088,14 +1192,14 @@
             tooltip: {
               callbacks: {
                 label: ctx => {
-                  const pct = (ctx.raw / BL.total_general * 100).toFixed(1);
+                  const pct = filtTotal > 0 ? (ctx.raw / filtTotal * 100).toFixed(1) : 0;
                   return " " + copFull(ctx.raw) + " (" + pct + "%)";
                 },
               },
             },
             datalabels: {
               display: true,
-              formatter: v => (v / BL.total_general * 100).toFixed(0) + "%",
+              formatter: v => filtTotal > 0 ? (v / filtTotal * 100).toFixed(0) + "%" : "",
               color: "#fff",
               font: { weight: "bold", size: 13 },
             },
@@ -1108,7 +1212,9 @@
   function renderBillingAcumulado() {
     if (!BL) return;
     destroyChart("billing-acumulado");
-    const t = BL.totales_por_categoria;
+    const rows = billingFilteredRows();
+    const t = {};
+    BL.categorias.forEach(c => { t[c.clave] = rows.reduce((s, r) => s + (r[c.clave] || 0), 0); });
     const sorted = [...BL.categorias].sort((a, b) => (t[b.clave] || 0) - (t[a.clave] || 0));
 
     CHARTS["billing-acumulado"] = new Chart(
@@ -1164,23 +1270,22 @@
       if (!btn) return;
       billingView = btn.dataset.view;
       tog.querySelectorAll(".metric-btn").forEach(b => b.classList.toggle("active", b === btn));
-      billingChartsRendered = false;
       renderBillingMensual();
-      billingChartsRendered = true;
     });
   }
 
   function renderBillingCharts() {
     if (!BL) { loadBillingData(); }
     if (!BL) return;
-    renderBillingKPIs();
     if (!billingChartsRendered) {
-      renderBillingMensual();
-      renderBillingDonut();
-      renderBillingAcumulado();
+      initBillingFilters();
       initBillingToggle();
       billingChartsRendered = true;
     }
+    renderBillingKPIs();
+    renderBillingMensual();
+    renderBillingDonut();
+    renderBillingAcumulado();
   }
 
   (function initBilling() {
