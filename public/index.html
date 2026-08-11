@@ -29,7 +29,15 @@
     </div>
   </header>
 
+  <div class="tab-outer">
+    <nav class="dashboard-tabs" id="dashboard-tabs">
+      <button class="tab-btn active" data-tab="eventos">Eventos</button>
+      <button class="tab-btn" data-tab="facturacion">Facturación</button>
+    </nav>
+  </div>
+
   <main class="container">
+  <div id="tab-eventos" class="tab-content">
 
     <!-- KPIs -->
     <section class="kpi-row" id="kpi-row">
@@ -211,6 +219,73 @@
       <div id="footer-totals"></div>
     </footer>
 
+  </div><!-- #tab-eventos -->
+
+  <!-- ================= TAB: FACTURACIÓN ================= -->
+  <div id="tab-facturacion" class="tab-content" hidden>
+
+    <!-- KPIs facturación -->
+    <section class="billing-kpi-row" id="billing-kpi-row">
+      <div class="billing-kpi-card kpi-primary">
+        <div class="billing-kpi-label">Total facturado (antes IVA)</div>
+        <div class="billing-kpi-value" id="billing-kpi-total">—</div>
+        <div class="billing-kpi-sub" id="billing-kpi-periodo">—</div>
+      </div>
+      <div class="billing-kpi-card kpi-telemetria">
+        <div class="billing-kpi-label">Servicio mensual cámaras IA</div>
+        <div class="billing-kpi-value" id="billing-kpi-telemetria">—</div>
+        <div class="billing-kpi-sub" id="billing-kpi-tel-pct">—</div>
+      </div>
+      <div class="billing-kpi-card kpi-mantenimiento">
+        <div class="billing-kpi-label">Bolsa de mantenimiento</div>
+        <div class="billing-kpi-value" id="billing-kpi-mantenimiento">—</div>
+        <div class="billing-kpi-sub" id="billing-kpi-mant-pct">—</div>
+      </div>
+      <div class="billing-kpi-card kpi-instalacion">
+        <div class="billing-kpi-label">Instalación</div>
+        <div class="billing-kpi-value" id="billing-kpi-instalacion">—</div>
+        <div class="billing-kpi-sub" id="billing-kpi-inst-pct">—</div>
+      </div>
+      <div class="billing-kpi-card kpi-equipos">
+        <div class="billing-kpi-label">Suministro de equipos</div>
+        <div class="billing-kpi-value" id="billing-kpi-equipos">—</div>
+        <div class="billing-kpi-sub" id="billing-kpi-equip-pct">—</div>
+      </div>
+    </section>
+
+    <!-- Gráfica principal: facturación por mes apilada -->
+    <section class="chart-grid">
+      <article class="chart-card">
+        <div class="chart-title-row">
+          <h3 class="chart-title">Facturación mensual por tipo de servicio (antes de IVA)</h3>
+          <div class="metric-toggle" id="billing-view-toggle">
+            <button class="metric-btn active" data-view="stacked">Apilado</button>
+            <button class="metric-btn" data-view="grouped">Agrupado</button>
+          </div>
+        </div>
+        <div class="chart-wrap chart-wrap-tall"><canvas id="billing-mensual"></canvas></div>
+      </article>
+    </section>
+
+    <!-- Donut + acumulado por categoría -->
+    <section class="chart-grid chart-grid-2col">
+      <article class="chart-card chart-card-pie">
+        <h3 class="chart-title">Distribución acumulada por tipo</h3>
+        <div class="chart-wrap chart-wrap-pie"><canvas id="billing-donut"></canvas></div>
+      </article>
+      <article class="chart-card">
+        <h3 class="chart-title">Total acumulado por servicio</h3>
+        <div class="chart-wrap"><canvas id="billing-acumulado"></canvas></div>
+      </article>
+    </section>
+
+    <footer class="page-footer">
+      <div>Datos de facturación extraídos de <strong>facturación edinsa.xlsx</strong> · Valores antes de IVA (19%)</div>
+      <div id="billing-footer-update">—</div>
+    </footer>
+
+  </div><!-- #tab-facturacion -->
+
   </main>
 
   <div id="loading" class="loading-overlay">
@@ -242,6 +317,7 @@
 
 <h3>Conclusión y recomendación<\/h3>
 <p>La flota EDINSA T1 muestra una <strong>mejora del 3,8%<\/strong> en tasa global, con 2026 como el mejor año en tasa ponderada histórica. <strong>Acción prioritaria doble:<\/strong> (1) investigar el pico de julio (730 ev/veh/mes) para determinar si es operacional o de captura; (2) lanzar intervención inmediata sobre <strong>Uso de celular<\/strong> (+26,5%) y <strong>Conducción con fatiga<\/strong> (+62,7%), los dos eventos con mayor crecimiento y mayor correlación con accidentalidad grave — segmentar los conductores con más de 100 alertas/mes de celular para retroalimentación individual urgente.<\/p></script>
+  <script id="billing-data" type="application/json">{"generado":"2026-08-11 07:01","meses":["2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06"],"categorias":[{"clave":"telemetria","label":"Servicio mensual cámaras IA","color":"#BC1818"},{"clave":"mantenimiento","label":"Bolsa de mantenimiento","color":"#E85D1E"},{"clave":"instalacion","label":"Instalación","color":"#1D4ED8"},{"clave":"equipos","label":"Suministro de equipos","color":"#7C3AED"}],"mensual":[{"month":"2025-12","telemetria":20785500.0,"mantenimiento":3196100.0,"instalacion":0,"equipos":0,"total":23981600.0},{"month":"2026-01","telemetria":19980900.0,"mantenimiento":3072380.0,"instalacion":0,"equipos":0,"total":23053280.0},{"month":"2026-02","telemetria":20919600.0,"mantenimiento":3216720.0,"instalacion":0,"equipos":0,"total":24136320.0},{"month":"2026-03","telemetria":22394700.0,"mantenimiento":3443540.0,"instalacion":0,"equipos":0,"total":25838240.0},{"month":"2026-04","telemetria":22528800.0,"mantenimiento":3464160.0,"instalacion":0,"equipos":0,"total":25992960.0},{"month":"2026-05","telemetria":13931400.0,"mantenimiento":4080980.0,"instalacion":5065520.0,"equipos":2853380.0,"total":25931280.0},{"month":"2026-06","telemetria":15038100.0,"mantenimiento":4405170.0,"instalacion":6166720.0,"equipos":6327060.0,"total":31937050.0}],"totales_por_categoria":{"telemetria":135579000.0,"mantenimiento":24879050.0,"instalacion":11232240.0,"equipos":9180440.0},"total_general":180870730.0}</script>
   <script src="dashboard.js"></script>
 </body>
 </html>

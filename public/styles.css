@@ -678,6 +678,104 @@ body {
   max-width: 90%;
 }
 
+/* ======================== Dashboard tabs ======================== */
+
+.dashboard-tabs {
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  gap: 0;
+  padding: 0 28px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 12px 22px 11px;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tab-outer {
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-border);
+  position: sticky;
+  top: 56px;
+  z-index: 9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+
+/* ======================== Billing KPIs ======================== */
+
+.billing-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.billing-kpi-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-md);
+  border-top: 3px solid var(--color-border);
+}
+
+.billing-kpi-card.kpi-primary { border-top-color: var(--color-primary); }
+.billing-kpi-card.kpi-telemetria { border-top-color: #BC1818; }
+.billing-kpi-card.kpi-mantenimiento { border-top-color: #E85D1E; }
+.billing-kpi-card.kpi-instalacion { border-top-color: #1D4ED8; }
+.billing-kpi-card.kpi-equipos { border-top-color: #7C3AED; }
+
+.billing-kpi-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  margin-bottom: 8px;
+}
+
+.billing-kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.billing-kpi-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .billing-kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+  .billing-kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-tabs { padding: 0 16px; }
+}
+
 /* ======================== Responsive ======================== */
 
 @media (max-width: 1100px) {

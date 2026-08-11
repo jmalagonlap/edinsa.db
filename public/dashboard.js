@@ -922,4 +922,270 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", main);
   else main();
 
+  // ── Tabs ────────────────────────────────────────────────────────────────
+
+  function initTabs() {
+    const nav = document.getElementById("dashboard-tabs");
+    if (!nav) return;
+    nav.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab-btn");
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      nav.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+      document.getElementById("tab-eventos").hidden = (tab !== "eventos");
+      document.getElementById("tab-facturacion").hidden = (tab !== "facturacion");
+      if (tab === "facturacion") renderBillingCharts();
+    });
+  }
+
+  // ── Facturación ─────────────────────────────────────────────────────────
+
+  let BL = null;
+  let billingView = "stacked";
+  let billingChartsRendered = false;
+
+  function loadBillingData() {
+    const el = document.getElementById("billing-data");
+    if (!el || !el.textContent.trim()) return;
+    try {
+      BL = JSON.parse(el.textContent);
+    } catch (e) {
+      console.warn("billing-data parse error", e);
+    }
+  }
+
+  function copFormat(v) {
+    if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(2).replace(".", ",") + " MM";
+    if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1).replace(".", ",") + " M";
+    return v.toLocaleString("es-CO");
+  }
+
+  function copFull(v) {
+    return "$ " + Math.round(v).toLocaleString("es-CO");
+  }
+
+  function renderBillingKPIs() {
+    if (!BL) return;
+    const total = BL.total_general;
+    const t = BL.totales_por_categoria;
+
+    const el = id => document.getElementById(id);
+    el("billing-kpi-total").textContent = "$ " + copFormat(total);
+    el("billing-kpi-periodo").textContent = BL.meses[0] + " → " + BL.meses[BL.meses.length - 1];
+
+    const subIds = {
+      telemetria:    "billing-kpi-tel-pct",
+      mantenimiento: "billing-kpi-mant-pct",
+      instalacion:   "billing-kpi-inst-pct",
+      equipos:       "billing-kpi-equip-pct",
+    };
+    BL.categorias.forEach(cat => {
+      const v = t[cat.clave] || 0;
+      const pct = total > 0 ? (v / total * 100).toFixed(1) + "% del total" : "—";
+      const valEl = el("billing-kpi-" + cat.clave);
+      if (valEl) valEl.textContent = "$ " + copFormat(v);
+      const sid = subIds[cat.clave];
+      if (sid) { const s = el(sid); if (s) s.textContent = pct; }
+    });
+
+    const upd = el("billing-footer-update");
+    if (upd) upd.textContent = "Generado: " + BL.generado;
+  }
+
+  function renderBillingMensual() {
+    if (!BL) return;
+    destroyChart("billing-mensual");
+    const mnLabels = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    const labels = BL.meses.map(m => {
+      const [yr, mo] = m.split("-");
+      return mnLabels[parseInt(mo, 10) - 1] + "\n" + yr;
+    });
+
+    const isStacked = billingView === "stacked";
+    const datasets = BL.categorias.map(cat => ({
+      label: cat.label,
+      data: BL.mensual.map(r => r[cat.clave] || 0),
+      backgroundColor: cat.color + "CC",
+      borderColor: cat.color,
+      borderWidth: 1,
+      borderRadius: isStacked ? 0 : 4,
+      stack: isStacked ? "stack" : cat.clave,
+    }));
+
+    CHARTS["billing-mensual"] = new Chart(
+      document.getElementById("billing-mensual").getContext("2d"),
+      {
+        type: "bar",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "top", labels: { boxWidth: 12, padding: 14 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => " " + ctx.dataset.label + ": " + copFull(ctx.raw),
+                footer: items => {
+                  const tot = items.reduce((s, i) => s + (i.raw || 0), 0);
+                  return tot > 0 ? "Total: " + copFull(tot) : "";
+                },
+              },
+            },
+            datalabels: { display: false },
+          },
+          scales: {
+            x: {
+              stacked: isStacked,
+              grid: { display: false },
+              ticks: { font: { size: 11 } },
+            },
+            y: {
+              stacked: isStacked,
+              ticks: {
+                callback: v => "$ " + copFormat(v),
+                font: { size: 11 },
+              },
+              grid: { color: "rgba(0,0,0,0.05)" },
+            },
+          },
+        },
+      }
+    );
+  }
+
+  function renderBillingDonut() {
+    if (!BL) return;
+    destroyChart("billing-donut");
+    const t = BL.totales_por_categoria;
+    const labels = BL.categorias.map(c => c.label);
+    const values = BL.categorias.map(c => t[c.clave] || 0);
+    const colors = BL.categorias.map(c => c.color);
+
+    CHARTS["billing-donut"] = new Chart(
+      document.getElementById("billing-donut").getContext("2d"),
+      {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors.map(c => c + "CC"),
+            borderColor: colors,
+            borderWidth: 1,
+            hoverOffset: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "60%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { boxWidth: 12, padding: 12, font: { size: 12 } },
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const pct = (ctx.raw / BL.total_general * 100).toFixed(1);
+                  return " " + copFull(ctx.raw) + " (" + pct + "%)";
+                },
+              },
+            },
+            datalabels: {
+              display: true,
+              formatter: v => (v / BL.total_general * 100).toFixed(0) + "%",
+              color: "#fff",
+              font: { weight: "bold", size: 13 },
+            },
+          },
+        },
+      }
+    );
+  }
+
+  function renderBillingAcumulado() {
+    if (!BL) return;
+    destroyChart("billing-acumulado");
+    const t = BL.totales_por_categoria;
+    const sorted = [...BL.categorias].sort((a, b) => (t[b.clave] || 0) - (t[a.clave] || 0));
+
+    CHARTS["billing-acumulado"] = new Chart(
+      document.getElementById("billing-acumulado").getContext("2d"),
+      {
+        type: "bar",
+        data: {
+          labels: sorted.map(c => c.label),
+          datasets: [{
+            label: "Total acumulado",
+            data: sorted.map(c => t[c.clave] || 0),
+            backgroundColor: sorted.map(c => c.color + "CC"),
+            borderColor: sorted.map(c => c.color),
+            borderWidth: 1,
+            borderRadius: 5,
+          }],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: ctx => " " + copFull(ctx.raw) },
+            },
+            datalabels: {
+              display: true,
+              anchor: "end",
+              align: "end",
+              formatter: v => "$ " + copFormat(v),
+              font: { size: 11, weight: "600" },
+              color: "#374151",
+            },
+          },
+          scales: {
+            x: {
+              ticks: { callback: v => "$ " + copFormat(v), font: { size: 11 } },
+              grid: { color: "rgba(0,0,0,0.05)" },
+            },
+            y: { grid: { display: false }, ticks: { font: { size: 12 } } },
+          },
+        },
+      }
+    );
+  }
+
+  function initBillingToggle() {
+    const tog = document.getElementById("billing-view-toggle");
+    if (!tog) return;
+    tog.addEventListener("click", (e) => {
+      const btn = e.target.closest(".metric-btn");
+      if (!btn) return;
+      billingView = btn.dataset.view;
+      tog.querySelectorAll(".metric-btn").forEach(b => b.classList.toggle("active", b === btn));
+      billingChartsRendered = false;
+      renderBillingMensual();
+      billingChartsRendered = true;
+    });
+  }
+
+  function renderBillingCharts() {
+    if (!BL) { loadBillingData(); }
+    if (!BL) return;
+    renderBillingKPIs();
+    if (!billingChartsRendered) {
+      renderBillingMensual();
+      renderBillingDonut();
+      renderBillingAcumulado();
+      initBillingToggle();
+      billingChartsRendered = true;
+    }
+  }
+
+  (function initBilling() {
+    initTabs();
+    loadBillingData();
+  })();
+
 })();
